@@ -28,14 +28,8 @@ export default function Header() {
         >
           <Menu size={24} />
         </button>
-        <h1 className="ml-4 text-xl font-semibold">
-          <Link to="/">
-            <img
-              src="/tanstack-word-logo-white.svg"
-              alt="TanStack Logo"
-              className="h-10"
-            />
-          </Link>
+        <h1 className="text-3xl md:text-4xl font-semibold text-white tracking-[-0.01em] pl-4">
+          <span className="text-gray-200">WM CALL QUEUE</span>
         </h1>
       </header>
 
