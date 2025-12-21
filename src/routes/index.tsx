@@ -1,118 +1,194 @@
-import { createFileRoute } from '@tanstack/react-router'
-import {
-  Zap,
-  Server,
-  Route as RouteIcon,
-  Shield,
-  Waves,
-  Sparkles,
-} from 'lucide-react'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { useState } from 'react'
+import { Check, Loader2, Plus } from 'lucide-react'
+import getStores from '../server/api/stores.get'
+import postStore from '../server/api/stores.post'
+import patchStore from '../server/api/[id].patch'
+import type { Store } from '../lib/types'
 
-export const Route = createFileRoute('/')({ component: App })
+export const Route = createFileRoute('/')({
+  component: StoreTracker,
+  loader: async ({ context: { queryClient } }) =>
+    await queryClient.ensureQueryData({
+      queryKey: ['stores'],
+      queryFn: () => getStores(),
+    }),
+})
 
-function App() {
-  const features = [
-    {
-      icon: <Zap className="w-12 h-12 text-cyan-400" />,
-      title: 'Powerful Server Functions',
-      description:
-        'Write server-side code that seamlessly integrates with your client components. Type-safe, secure, and simple.',
-    },
-    {
-      icon: <Server className="w-12 h-12 text-cyan-400" />,
-      title: 'Flexible Server Side Rendering',
-      description:
-        'Full-document SSR, streaming, and progressive enhancement out of the box. Control exactly what renders where.',
-    },
-    {
-      icon: <RouteIcon className="w-12 h-12 text-cyan-400" />,
-      title: 'API Routes',
-      description:
-        'Build type-safe API endpoints alongside your application. No separate backend needed.',
-    },
-    {
-      icon: <Shield className="w-12 h-12 text-cyan-400" />,
-      title: 'Strongly Typed Everything',
-      description:
-        'End-to-end type safety from server to client. Catch errors before they reach production.',
-    },
-    {
-      icon: <Waves className="w-12 h-12 text-cyan-400" />,
-      title: 'Full Streaming Support',
-      description:
-        'Stream data from server to client progressively. Perfect for AI applications and real-time updates.',
-    },
-    {
-      icon: <Sparkles className="w-12 h-12 text-cyan-400" />,
-      title: 'Next Generation Ready',
-      description:
-        'Built from the ground up for modern web applications. Deploy anywhere JavaScript runs.',
-    },
-  ]
+function StoreTracker() {
+  const router = useRouter()
+  // Ensure we have an array (loader returns the array directly)
+  const initialStores = Route.useLoaderData()
+  const [newStoreName, setNewStoreName] = useState('')
+  const [isAdding, setIsAdding] = useState(false)
+
+  // Sort by ID descending (newest first)
+  const stores = [...initialStores].sort((a, b) => b.id - a.id)
+
+  const handleAddStore = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newStoreName.trim()) return
+
+    setIsAdding(true)
+    try {
+      postStore(newStoreName)
+      setNewStoreName('')
+      await router.invalidate()
+    } finally {
+      setIsAdding(false)
+    }
+  }
+
+  const handleToggleStatus = async (store: Store) => {
+    const newStatus = store.status === 'completed' ? 'in-progress' : 'completed'
+    patchStore(store.id, { status: newStatus })
+    await router.invalidate()
+  }
+
+  const handleUpdateNotes = async (store: Store, notes: string) => {
+    if (store.notes === notes) return
+    patchStore(store.id, { notes })
+    await router.invalidate() // Optional: immediate update not strictly needed if local state matches text, but good for sync
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-      <section className="relative py-20 px-6 text-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10"></div>
-        <div className="relative max-w-5xl mx-auto">
-          <div className="flex items-center justify-center gap-6 mb-6">
-            <img
-              src="/tanstack-circle-logo.png"
-              alt="TanStack Logo"
-              className="w-24 h-24 md:w-32 md:h-32"
-            />
-            <h1 className="text-6xl md:text-7xl font-black text-white [letter-spacing:-0.08em]">
-              <span className="text-gray-300">TANSTACK</span>{' '}
-              <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                START
-              </span>
+    <div className="min-h-screen bg-slate-900 text-gray-100 p-8">
+      <div className="max-w-4xl mx-auto">
+        <header className="mb-8 items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              Store Tracker
             </h1>
+            <p className="text-slate-400">Manage store progress and notes</p>
           </div>
-          <p className="text-2xl md:text-3xl text-gray-300 mb-4 font-light">
-            The framework for next generation AI applications
-          </p>
-          <p className="text-lg text-gray-400 max-w-3xl mx-auto mb-8">
-            Full-stack framework powered by TanStack Router for React and Solid.
-            Build modern applications with server functions, streaming, and type
-            safety.
-          </p>
-          <div className="flex flex-col items-center gap-4">
-            <a
-              href="https://tanstack.com/start"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-8 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-cyan-500/50"
-            >
-              Documentation
-            </a>
-            <p className="text-gray-400 text-sm mt-2">
-              Begin your TanStack Start journey by editing{' '}
-              <code className="px-2 py-1 bg-slate-700 rounded text-cyan-400">
-                /src/routes/index.tsx
-              </code>
-            </p>
-          </div>
-        </div>
-      </section>
+        </header>
 
-      <section className="py-16 px-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 hover:border-cyan-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/10"
+        {/* Add Store Form */}
+        <form
+          onSubmit={handleAddStore}
+          className="bg-slate-800 p-6 rounded-xl border border-slate-700 mb-8 flex gap-4 items-end shadow-lg"
+        >
+          <div className="flex-1">
+            <label
+              htmlFor="storeName"
+              className="block text-sm font-medium text-slate-400 mb-1"
             >
-              <div className="mb-4">{feature.icon}</div>
-              <h3 className="text-xl font-semibold text-white mb-3">
-                {feature.title}
-              </h3>
-              <p className="text-gray-400 leading-relaxed">
-                {feature.description}
-              </p>
-            </div>
+              Store Number / Name
+            </label>
+            <input
+              id="storeName"
+              type="text"
+              value={newStoreName}
+              onChange={(e) => setNewStoreName(e.target.value)}
+              placeholder="e.g. Store 1234"
+              className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none text-white placeholder-slate-600"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={isAdding || !newStoreName.trim()}
+            className="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
+          >
+            {isAdding ? (
+              <Loader2 className="animate-spin w-5 h-5" />
+            ) : (
+              <Plus className="w-5 h-5" />
+            )}
+            Add Store
+          </button>
+        </form>
+
+        {/* Store List */}
+        <div className="grid gap-4">
+          {stores.map((store) => (
+            <StoreCard
+              key={store.id}
+              store={store}
+              onToggle={() => handleToggleStatus(store)}
+              onUpdateNotes={(n) => handleUpdateNotes(store, n)}
+            />
           ))}
+          {stores.length === 0 && (
+            <div className="text-center py-12 text-slate-500 bg-slate-800/50 rounded-xl border border-dashed border-slate-700">
+              No stores tracked yet. Add one above!
+            </div>
+          )}
         </div>
-      </section>
+      </div>
+    </div>
+  )
+}
+
+function StoreCard({
+  store,
+  onToggle,
+  onUpdateNotes,
+}: {
+  store: Store
+  onToggle: () => void
+  onUpdateNotes: (n: string) => void
+}) {
+  const [notes, setNotes] = useState(store.notes)
+  const isCompleted = store.status === 'completed'
+
+  return (
+    <div
+      className={`
+      group p-6 rounded-xl border transition-all duration-200
+      ${
+        isCompleted
+          ? 'bg-slate-900/50 border-slate-800 opacity-75'
+          : 'bg-slate-800 border-slate-700 hover:border-slate-600 shadow-sm'
+      }
+    `}
+    >
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onToggle}
+            className={`
+              w-8 h-8 rounded-full flex items-center justify-center transition-colors border-2
+              ${
+                isCompleted
+                  ? 'bg-green-500 border-green-500 text-white'
+                  : 'border-slate-500 text-transparent hover:border-cyan-400'
+              }
+            `}
+          >
+            <Check className="w-5 h-5" strokeWidth={3} />
+          </button>
+          <div>
+            <h3
+              className={`text-xl font-bold ${isCompleted ? 'text-slate-500 line-through' : 'text-white'}`}
+            >
+              {store.name}
+            </h3>
+            <span
+              className={`
+              inline-block px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider mt-1
+              ${isCompleted ? 'bg-green-500/10 text-green-400' : 'bg-blue-500/10 text-blue-400'}
+            `}
+            >
+              {store.status}
+            </span>
+          </div>
+        </div>
+        <div className="text-xs text-slate-500 font-mono">#{store.id}</div>
+      </div>
+
+      <div className="pl-12">
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+          Notes
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          onBlur={() => onUpdateNotes(notes)}
+          placeholder="Add notes here..."
+          rows={2}
+          className="w-full px-3 py-2 bg-slate-900/50 border border-slate-700/50 rounded-lg text-sm text-slate-300 focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-500/50 outline-none resize-none transition-colors placeholder-slate-600"
+        />
+      </div>
     </div>
   )
 }
