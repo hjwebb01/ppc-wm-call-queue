@@ -2,15 +2,19 @@ import { stores } from './stores.get'
 import type { Store } from '../../lib/types'
 
 export default function patchStore(id: number, updates: Partial<Store>) {
-  const store = stores.find((s) => s.id === id)
-  if (!store) {
+  const index = stores.findIndex((s) => s.id === id)
+
+  if (index === -1) {
     throw new Error(`Store with id ${id} not found`)
   }
 
-  if (updates.status) store.status = updates.status
-  if (updates.notes !== undefined) store.notes = updates.notes
+  // Create a new object to ensure reactivity and avoid direct mutation
+  const updatedStore: Store = {
+    ...stores[index],
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  }
 
-  store.updatedAt = new Date().toISOString()
-
-  return store
+  stores[index] = updatedStore
+  return updatedStore
 }

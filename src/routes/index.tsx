@@ -1,10 +1,11 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Check, Loader2, Plus } from 'lucide-react'
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { Loader2, Plus } from 'lucide-react'
 import getStores from '../server/api/stores.get'
 import postStore from '../server/api/stores.post'
 import patchStore from '../server/api/[id].patch'
-import type { Store } from '../lib/types'
+import type { Store, StoreStatus } from '../lib/types'
 import StoreCard from '../components/StoreCard'
 
 export const Route = createFileRoute('/')({
@@ -17,9 +18,11 @@ export const Route = createFileRoute('/')({
 })
 
 function StoreTracker() {
-  const router = useRouter()
-  // Ensure we have an array (loader returns the array directly)
-  const initialStores = Route.useLoaderData()
+  const queryClient = useQueryClient()
+  const { data: initialStores } = useSuspenseQuery({
+    queryKey: ['stores'],
+    queryFn: () => getStores(),
+  })
   const [newStoreName, setNewStoreName] = useState('')
   const [isAdding, setIsAdding] = useState(false)
 
@@ -34,22 +37,21 @@ function StoreTracker() {
     try {
       postStore(newStoreName)
       setNewStoreName('')
-      await router.invalidate()
+      await queryClient.invalidateQueries({ queryKey: ['stores'] })
     } finally {
       setIsAdding(false)
     }
   }
 
-  const handleToggleStatus = async (store: Store) => {
-    const newStatus = store.status === 'completed' ? 'in-progress' : 'completed'
-    patchStore(store.id, { status: newStatus })
-    await router.invalidate()
+  const handleStatusChange = async (store: Store, status: StoreStatus) => {
+    patchStore(store.id, { status })
+    await queryClient.invalidateQueries({ queryKey: ['stores'] })
   }
 
   const handleUpdateNotes = async (store: Store, notes: string) => {
     if (store.notes === notes) return
     patchStore(store.id, { notes })
-    await router.invalidate() // Optional: immediate update not strictly needed if local state matches text, but good for sync
+    await queryClient.invalidateQueries({ queryKey: ['stores'] })
   }
 
   return (
@@ -105,7 +107,7 @@ function StoreTracker() {
             <StoreCard
               key={store.id}
               store={store}
-              onToggle={() => handleToggleStatus(store)}
+              onStatusChange={(status) => handleStatusChange(store, status)}
               onUpdateNotes={(n) => handleUpdateNotes(store, n)}
             />
           ))}

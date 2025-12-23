@@ -28,5 +28,5 @@ export const stores: Array<Store> = [
 ]
 
 export default function getStores() {
-  return stores
+  return [...stores]
 }

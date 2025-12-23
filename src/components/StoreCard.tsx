@@ -1,18 +1,25 @@
 import { useState } from 'react'
-import { Check } from 'lucide-react'
-import type { Store } from '../lib/types'
+import type { Store, StoreStatus } from '../lib/types'
+
+const statusStyles: Record<StoreStatus, { bg: string; text: string }> = {
+  'in-progress': { bg: 'bg-blue-500/10', text: 'text-blue-400' },
+  completed: { bg: 'bg-green-500/10', text: 'text-green-400' },
+  warning: { bg: 'bg-yellow-500/10', text: 'text-yellow-400' },
+  'needs-action': { bg: 'bg-red-500/10', text: 'text-red-400' },
+}
 
 export default function StoreCard({
   store,
-  onToggle,
+  onStatusChange,
   onUpdateNotes,
 }: {
   store: Store
-  onToggle: () => void
+  onStatusChange: (status: StoreStatus) => void
   onUpdateNotes: (n: string) => void
 }) {
   const [notes, setNotes] = useState(store.notes)
   const isCompleted = store.status === 'completed'
+  const currentStyles = statusStyles[store.status]
 
   return (
     <div
@@ -27,19 +34,16 @@ export default function StoreCard({
     >
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="flex items-center gap-4">
-          <button
-            onClick={onToggle}
-            className={`
-              w-8 h-8 rounded-full flex items-center justify-center transition-colors border-2
-              ${
-                isCompleted
-                  ? 'bg-green-500 border-green-500 text-white'
-                  : 'border-slate-500 text-transparent hover:border-cyan-400'
-              }
-            `}
+          <select
+            value={store.status}
+            onChange={(e) => onStatusChange(e.target.value as StoreStatus)}
+            className="px-1.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-300 focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-500/50 outline-none cursor-pointer transition-colors hover:border-slate-600"
           >
-            <Check className="w-5 h-5" strokeWidth={3} />
-          </button>
+            <option value="in-progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="warning">Warning</option>
+            <option value="needs-action">Needs Action</option>
+          </select>
           <div>
             <h3
               className={`text-xl font-bold ${isCompleted ? 'text-slate-500 line-through' : 'text-white'}`}
@@ -49,7 +53,7 @@ export default function StoreCard({
             <span
               className={`
               inline-block px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider mt-1
-              ${isCompleted ? 'bg-green-500/10 text-green-400' : 'bg-blue-500/10 text-blue-400'}
+              ${currentStyles.bg} ${currentStyles.text}
             `}
             >
               {store.status}

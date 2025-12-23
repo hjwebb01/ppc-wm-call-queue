@@ -6,14 +6,16 @@ export default function postStore(name: string) {
     (max, store) => (store.id > max ? store.id : max),
     0,
   )
-  const store: Store = {
+
+  const newStore: Store = {
     id: maxId + 1,
-    name: name,
+    name: name.trim(),
     status: 'in-progress',
     notes: '',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
-  stores.push(store)
-  return store
+
+  stores.push(newStore)
+  return newStore
 }
